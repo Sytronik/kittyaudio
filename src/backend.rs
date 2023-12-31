@@ -163,7 +163,7 @@ impl Backend {
 
     /// Handle all errors in the error queue.
     #[inline]
-    pub fn handle_errors(&mut self, err_fn: impl FnMut(cpal::StreamError)) {
+    pub fn handle_errors(&self, err_fn: impl FnMut(cpal::StreamError)) {
         self.error_queue.lock().drain(..).for_each(err_fn)
     }
 

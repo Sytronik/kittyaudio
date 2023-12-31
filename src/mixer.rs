@@ -6,7 +6,7 @@ use crate::Sound;
 #[cfg(feature = "cpal")]
 use crate::{Backend, Device, StreamSettings};
 
-use parking_lot::{Mutex, MutexGuard};
+use parking_lot::{RwLock, RwLockReadGuard};
 use std::sync::Arc;
 
 /// Audio mixer. The mixing is done by the [`Renderer`] ([`RendererHandle`]),
@@ -17,7 +17,7 @@ pub struct Mixer {
     pub renderer: RendererHandle<DefaultRenderer>,
     /// Handle to the underlying audio backend.
     #[cfg(feature = "cpal")]
-    pub backend: Arc<Mutex<Backend>>,
+    pub backend: Arc<RwLock<Backend>>,
 }
 
 impl Default for Mixer {
@@ -32,15 +32,15 @@ impl Mixer {
         Self {
             renderer: DefaultRenderer::default().into(),
             #[cfg(feature = "cpal")]
-            backend: Arc::new(Mutex::new(Backend::new())),
+            backend: Arc::new(RwLock::new(Backend::new())),
         }
     }
 
     /// Get a lock on the underlying backend.
     #[cfg(feature = "cpal")]
     #[inline(always)]
-    pub fn backend(&self) -> MutexGuard<'_, Backend> {
-        self.backend.lock()
+    pub fn backend(&self) -> RwLockReadGuard<'_, Backend> {
+        self.backend.read()
     }
 
     /// Play a [`Sound`].
@@ -57,7 +57,7 @@ impl Mixer {
     /// Handle stream errors.
     #[inline]
     #[cfg(feature = "cpal")]
-    pub fn handle_errors(&mut self, err_fn: impl FnMut(cpal::StreamError)) {
+    pub fn handle_errors(&self, err_fn: impl FnMut(cpal::StreamError)) {
         self.backend().handle_errors(err_fn);
     }
 
@@ -80,7 +80,7 @@ impl Mixer {
         std::thread::spawn(move || {
             // TODO: handle errors from `start_audio_thread`
             let _ = backend
-                .lock()
+                .write()
                 .start_audio_thread(device, settings, renderer);
         });
     }
